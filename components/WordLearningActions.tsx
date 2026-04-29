@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { addDays } from "@/lib/date";
+import { addDays, startOfTodayIso } from "@/lib/date";
 import { createClient } from "@/lib/supabase-browser";
 import type { UserWord } from "@/lib/types";
 
@@ -44,10 +44,9 @@ type WordLearningActionsProps = {
 
 export function WordLearningActions({ word, onRecorded }: WordLearningActionsProps) {
   const supabase = useMemo(() => createClient(), []);
-  const [recordedResult, setRecordedResult] = useState<ReviewResult | null>(word.last_review_result ?? null);
+  const [recorded, setRecorded] = useState(() => Boolean(word.last_review_result) || isReviewedToday(word.last_reviewed_at));
   const [savingResult, setSavingResult] = useState<ReviewResult | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
-  const recorded = Boolean(recordedResult);
 
   async function recordResult(result: ReviewResult, daysUntilReview: number, familiarityDelta: number) {
     if (recorded || savingResult) return;
@@ -84,7 +83,7 @@ export function WordLearningActions({ word, onRecorded }: WordLearningActionsPro
 
           if (fallbackError) throw fallbackError;
           const updatedWord = { ...(fallbackData as UserWord), last_review_result: result };
-          setRecordedResult(result);
+          setRecorded(true);
           onRecorded?.(updatedWord);
           return;
         }
@@ -92,7 +91,7 @@ export function WordLearningActions({ word, onRecorded }: WordLearningActionsPro
         throw error;
       }
 
-      setRecordedResult(result);
+      setRecorded(true);
       onRecorded?.((data ?? { ...word, ...updatePayload }) as UserWord);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "记录失败");
@@ -120,4 +119,9 @@ export function WordLearningActions({ word, onRecorded }: WordLearningActionsPro
       {errorMessage ? <p className="mt-2 text-sm text-rose-600">{errorMessage}</p> : null}
     </div>
   );
+}
+
+function isReviewedToday(value: string | null | undefined) {
+  if (!value) return false;
+  return new Date(value).getTime() >= new Date(startOfTodayIso()).getTime();
 }

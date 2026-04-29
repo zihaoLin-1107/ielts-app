@@ -59,7 +59,6 @@ export default function DailyWordsPage() {
           .select("*")
           .eq("user_id", user.id)
           .lte("next_review_at", now)
-          .gt("review_count", 0)
           .order("next_review_at", { ascending: true })
           .limit(50),
         supabase.from("user_words").select("id", { count: "exact", head: true }).eq("user_id", user.id)

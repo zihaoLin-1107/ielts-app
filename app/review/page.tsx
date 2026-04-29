@@ -29,7 +29,6 @@ export default function ReviewPage() {
         .select("*")
         .eq("user_id", user.id)
         .lte("next_review_at", new Date().toISOString())
-        .gt("review_count", 0)
         .order("next_review_at", { ascending: true })
         .limit(50);
 
@@ -75,7 +74,9 @@ export default function ReviewPage() {
     <AppShell>
       <h1 className="mb-4 text-xl font-bold">今日复习</h1>
       {!current ? (
-        <div className="rounded border border-stone-200 bg-white p-5 text-center">今日待复习已完成</div>
+        <div className="rounded border border-stone-200 bg-white p-5 text-center">
+          当前没有到期复习词。刚标记的新词会按 1 / 3 / 7 天后再次出现。
+        </div>
       ) : (
         <section className="rounded border border-stone-200 bg-white p-5">
           <div className="mb-2 text-sm text-stone-500">

@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
+import { startOfTodayIso, startOfTomorrowIso } from "@/lib/date";
 import { createClient } from "@/lib/supabase-browser";
 
 export default function ImportPackPage() {
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const [title, setTitle] = useState("");
   const [markdown, setMarkdown] = useState("");
 
@@ -21,11 +22,19 @@ export default function ImportPackPage() {
       return;
     }
 
+    const today = startOfTodayIso();
+    const tomorrow = startOfTomorrowIso();
+    const { data: todayRows } = await supabase
+      .from("user_words")
+      .select("word")
+      .eq("user_id", user.id)
+      .or(`and(first_learned_at.gte.${today},first_learned_at.lt.${tomorrow}),and(last_reviewed_at.gte.${today},last_reviewed_at.lt.${tomorrow})`);
+
     const { error } = await supabase.from("daily_training_packs").insert({
       user_id: user.id,
       title: title.trim() || `训练包 ${new Date().toLocaleDateString()}`,
       content_markdown: markdown,
-      source_words: []
+      source_words: Array.from(new Set((todayRows ?? []).map((row) => row.word).filter(Boolean)))
     });
 
     if (error) alert(error.message);

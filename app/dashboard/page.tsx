@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { PrimaryLink } from "@/components/PrimaryButton";
 import { createClient } from "@/lib/supabase-server";
@@ -5,6 +6,12 @@ import { startOfTodayIso } from "@/lib/date";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+
+  if (!user) redirect("/login");
+
   const today = startOfTodayIso();
   const now = new Date().toISOString();
 
@@ -15,11 +22,11 @@ export default async function DashboardPage() {
     { count: totalBankWords },
     { count: packCount }
   ] = await Promise.all([
-    supabase.from("user_words").select("id", { count: "exact", head: true }).lte("next_review_at", now),
-    supabase.from("user_words").select("id", { count: "exact", head: true }).gte("first_learned_at", today),
-    supabase.from("user_words").select("id", { count: "exact", head: true }),
-    supabase.from("vocabulary_bank").select("id", { count: "exact", head: true }).eq("is_active", true),
-    supabase.from("daily_training_packs").select("id", { count: "exact", head: true }).gte("created_at", today)
+    supabase.from("user_words").select("id", { count: "exact", head: true }).eq("user_id", user.id).lte("next_review_at", now).gt("review_count", 0),
+    supabase.from("user_words").select("id", { count: "exact", head: true }).eq("user_id", user.id).gte("first_learned_at", today),
+    supabase.from("user_words").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+    supabase.from("vocabulary_bank").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("is_active", true),
+    supabase.from("daily_training_packs").select("id", { count: "exact", head: true }).eq("user_id", user.id).gte("created_at", today)
   ]);
 
   return (

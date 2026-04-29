@@ -74,6 +74,21 @@ export default function HomePage() {
 
       if (learnedError) throw learnedError;
 
+      const { data: existingToday, error: existingTodayError } = await supabase
+        .from("user_words")
+        .select("*")
+        .eq("user_id", user.id)
+        .gte("first_learned_at", startOfTodayIso())
+        .order("first_learned_at", { ascending: true });
+
+      if (existingTodayError) throw existingTodayError;
+
+      if (existingToday?.length) {
+        setTodayWords(existingToday as UserWord[]);
+        setMessage("今天已经抽取过单词，不会重复抽取。");
+        return;
+      }
+
       const learnedWordKeys = new Set((learnedRows ?? []).map((row) => String(row.word).toLowerCase()));
       const learnedVocabularyIds = new Set((learnedRows ?? []).map((row) => row.vocabulary_bank_id).filter(Boolean));
 
@@ -108,6 +123,8 @@ export default function HomePage() {
             example_sentence: row.example_sentence,
             source: row.source,
             tags: row.tags,
+            familiarity_level: 0,
+            review_count: 0,
             next_review_at: now,
             first_learned_at: now
           }))

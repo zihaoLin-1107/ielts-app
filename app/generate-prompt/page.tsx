@@ -2,14 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
-import { startOfTodayIso } from "@/lib/date";
+import { startOfTodayIso, startOfTomorrowIso } from "@/lib/date";
 import { createClient } from "@/lib/supabase-browser";
 import type { UserWord } from "@/lib/types";
-
-function startOfTomorrowIso() {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toISOString();
-}
 
 function dedupeWords(rows: UserWord[]) {
   const seen = new Set<string>();
@@ -55,83 +50,88 @@ Create one integrated IELTS training pack using today's target vocabulary. The p
 
 ## Required Fixed Markdown Output Format
 
-### 1. Reading
-#### Passage
-Write one IELTS-style reading passage of 250-350 words.
+# Daily IELTS Training Pack
 
-#### Target Words Used
-List the target words used in the passage.
+## 1. Reading
 
-#### Questions
-Create 5 questions:
-1. True / False / Not Given
-2. True / False / Not Given
-3. Multiple choice
-4. Short answer
-5. Sentence completion
+### Title
+Write a clear title.
 
-#### Answer Key
-Provide answers with one-sentence explanations.
+### Passage
+Write a 150-250 word passage. Use today's target words naturally. Do not sacrifice naturalness just to include more words.
 
-### 2. Listening
-#### Script
-Write one listening script of 2 speakers, suitable for IELTS Section 2 or Section 3.
+### Key Vocabulary Used
+- List target words used in the passage.
 
-#### Target Words Used
-List the target words used in the script.
+### Questions
+1. Write one comprehension question.
+2. Write one detail question.
+3. Write one inference or vocabulary-in-context question.
 
-#### Questions
-Create 5 listening questions:
-1. Form completion
-2. Form completion
-3. Multiple choice
-4. Matching
-5. Short answer
+### Answers
+1. Provide the answer.
+2. Provide the answer.
+3. Provide the answer.
 
-#### Answer Key
-Provide answers and explain briefly.
+---
 
-### 3. Speaking
-#### Part 1
-Create 4 IELTS Speaking Part 1 questions and sample answers.
+## 2. Listening
 
-#### Part 2
-Create 1 cue card and 1 sample answer.
+### Script
+Write a 60-90 second listening script suitable for reading aloud or later turning into audio.
 
-#### Part 3
-Create 4 follow-up questions and sample answers.
+### Key Vocabulary Used
+- List target words used in the script.
 
-#### Useful Expressions
-List 6 useful expressions based on today's target words.
+### Questions
+1. Write one listening question.
+2. Write one listening question.
+3. Write one listening question.
 
-### 4. Writing
-#### Task 2 Question
-Create one IELTS Writing Task 2 question related to the themes of today's words.
+### Answers
+1. Provide the answer.
+2. Provide the answer.
+3. Provide the answer.
 
-#### Planning
-Provide:
-- Position
-- Main idea 1
-- Main idea 2
-- Example
-- Possible conclusion
+---
 
-#### Model Paragraph
-Write one body paragraph at IELTS 6.0-6.5 level.
+## 3. Speaking
 
-#### Target Words Used
-List the target words used in the writing section.
+### Part 1
+1. Write one IELTS Speaking Part 1 question.
+2. Write one IELTS Speaking Part 1 question.
+3. Write one IELTS Speaking Part 1 question.
 
-### 5. Review
-#### Vocabulary Review Table
-Create a Markdown table with columns:
-| Word | Meaning | Example sentence | Collocation |
+### Part 2
+Describe a topic related to today's target vocabulary.
 
-#### Mini Quiz
-Create 10 fill-in-the-blank questions using today's target words.
+### Part 3
+1. Write one IELTS Speaking Part 3 question.
+2. Write one IELTS Speaking Part 3 question.
+3. Write one IELTS Speaking Part 3 question.
 
-#### Mini Quiz Answer Key
-Provide the answer key.`;
+### Useful Answer Patterns
+- Give useful sentence patterns that I can reuse.
+
+---
+
+## 4. Writing
+
+### Task
+Create one small writing task that can be completed in 10-15 minutes.
+
+### Sample Answer
+Write a 120-180 word sample answer.
+
+### Useful Expressions
+- List useful expressions from or related to today's target words.
+
+---
+
+## 5. Review Task
+
+### Today’s Active Recall
+Create 5 active recall questions to help me review today's target words.`;
 }
 
 export default function GeneratePromptPage() {

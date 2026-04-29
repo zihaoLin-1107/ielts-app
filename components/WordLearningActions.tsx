@@ -11,24 +11,28 @@ const RESULT_OPTIONS: Array<{
   label: string;
   result: ReviewResult;
   daysUntilReview: number;
+  familiarityDelta: number;
   className: string;
 }> = [
   {
     label: "认识",
     result: "know",
     daysUntilReview: 7,
+    familiarityDelta: 1,
     className: "bg-sage text-white"
   },
   {
     label: "模糊",
     result: "vague",
-    daysUntilReview: 2,
+    daysUntilReview: 3,
+    familiarityDelta: 0,
     className: "bg-amber-500 text-white"
   },
   {
     label: "不认识",
     result: "unknown",
     daysUntilReview: 1,
+    familiarityDelta: -1,
     className: "bg-rose-600 text-white"
   }
 ];
@@ -45,17 +49,19 @@ export function WordLearningActions({ word, onRecorded }: WordLearningActionsPro
   const [errorMessage, setErrorMessage] = useState("");
   const recorded = Boolean(recordedResult);
 
-  async function recordResult(result: ReviewResult, daysUntilReview: number) {
+  async function recordResult(result: ReviewResult, daysUntilReview: number, familiarityDelta: number) {
     if (recorded || savingResult) return;
 
     setSavingResult(result);
     setErrorMessage("");
 
     const now = new Date();
+    const nextFamiliarityLevel = Math.max(0, Math.min(5, (word.familiarity_level ?? 0) + familiarityDelta));
     const updatePayload = {
       next_review_at: addDays(now, daysUntilReview).toISOString(),
       last_reviewed_at: now.toISOString(),
       review_count: word.review_count + 1,
+      familiarity_level: nextFamiliarityLevel,
       last_review_result: result
     };
 
@@ -69,7 +75,8 @@ export function WordLearningActions({ word, onRecorded }: WordLearningActionsPro
             .update({
               next_review_at: updatePayload.next_review_at,
               last_reviewed_at: updatePayload.last_reviewed_at,
-              review_count: updatePayload.review_count
+              review_count: updatePayload.review_count,
+              familiarity_level: updatePayload.familiarity_level
             })
             .eq("id", word.id)
             .select("*")
@@ -102,7 +109,7 @@ export function WordLearningActions({ word, onRecorded }: WordLearningActionsPro
             key={option.result}
             type="button"
             disabled={recorded || Boolean(savingResult)}
-            onClick={() => recordResult(option.result, option.daysUntilReview)}
+            onClick={() => recordResult(option.result, option.daysUntilReview, option.familiarityDelta)}
             className={`rounded px-2 py-2 text-sm font-semibold disabled:bg-stone-200 disabled:text-stone-500 ${option.className}`}
           >
             {savingResult === option.result ? "记录中" : option.label}

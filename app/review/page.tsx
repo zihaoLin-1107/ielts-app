@@ -14,27 +14,58 @@ export default function ReviewPage() {
   const current = words[index];
 
   useEffect(() => {
-    supabase
-      .from("user_words")
-      .select("*")
-      .lte("next_review_at", new Date().toISOString())
-      .order("next_review_at", { ascending: true })
-      .limit(50)
-      .then(({ data }) => setWords((data ?? []) as UserWord[]));
+    async function loadReviewWords() {
+      const {
+        data: { user }
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setWords([]);
+        return;
+      }
+
+      const { data } = await supabase
+        .from("user_words")
+        .select("*")
+        .eq("user_id", user.id)
+        .lte("next_review_at", new Date().toISOString())
+        .gt("review_count", 0)
+        .order("next_review_at", { ascending: true })
+        .limit(50);
+
+      setWords((data ?? []) as UserWord[]);
+    }
+
+    loadReviewWords();
   }, [supabase]);
 
   async function mark(days: number, delta: number) {
     if (!current) return;
+    const now = new Date();
     const nextLevel = Math.max(0, Math.min(5, current.familiarity_level + delta));
-    await supabase
+    const updatePayload = {
+      next_review_at: addDays(now, days).toISOString(),
+      last_reviewed_at: now.toISOString(),
+      review_count: current.review_count + 1,
+      familiarity_level: nextLevel,
+      last_review_result: delta > 0 ? "know" : delta < 0 ? "unknown" : "vague"
+    };
+    const { error } = await supabase
       .from("user_words")
-      .update({
-        next_review_at: addDays(new Date(), days).toISOString(),
-        last_reviewed_at: new Date().toISOString(),
-        review_count: current.review_count + 1,
-        familiarity_level: nextLevel
-      })
+      .update(updatePayload)
       .eq("id", current.id);
+
+    if (error?.message.toLowerCase().includes("last_review_result")) {
+      await supabase
+        .from("user_words")
+        .update({
+          next_review_at: updatePayload.next_review_at,
+          last_reviewed_at: updatePayload.last_reviewed_at,
+          review_count: updatePayload.review_count,
+          familiarity_level: updatePayload.familiarity_level
+        })
+        .eq("id", current.id);
+    }
 
     setShowAnswer(false);
     setIndex((value) => value + 1);

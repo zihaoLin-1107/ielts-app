@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { startOfTodayIso } from "@/lib/date";
 import { createClient } from "@/lib/supabase-browser";
@@ -9,6 +10,7 @@ import type { UserWord, VocabularyBankWord } from "@/lib/types";
 const DAILY_WORD_COUNT = 20;
 
 export default function HomePage() {
+  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [todayWords, setTodayWords] = useState<UserWord[]>([]);
   const [message, setMessage] = useState("");
@@ -25,7 +27,7 @@ export default function HomePage() {
       } = await supabase.auth.getUser();
 
       if (!user) {
-        setMessage("请先登录");
+        setMessage("请先登录后生成今日单词");
         setTodayWords([]);
         return;
       }
@@ -59,7 +61,10 @@ export default function HomePage() {
         data: { user }
       } = await supabase.auth.getUser();
 
-      if (!user) throw new Error("请先登录");
+      if (!user) {
+        router.push("/login");
+        return;
+      }
 
       const { data: learnedRows, error: learnedError } = await supabase
         .from("user_words")

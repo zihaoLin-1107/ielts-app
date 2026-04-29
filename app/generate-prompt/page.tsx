@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
+import { CORE_WORD_COUNT, pickCoreWords } from "@/lib/core-words";
 import { startOfTodayIso, startOfTomorrowIso } from "@/lib/date";
 import { createClient } from "@/lib/supabase-browser";
 import type { UserWord } from "@/lib/types";
@@ -137,6 +138,7 @@ Create 5 active recall questions to help me review today's target words.`;
 export default function GeneratePromptPage() {
   const supabase = useMemo(() => createClient(), []);
   const [words, setWords] = useState<UserWord[]>([]);
+  const [todayTotalCount, setTodayTotalCount] = useState(0);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -153,6 +155,7 @@ export default function GeneratePromptPage() {
 
         if (!user) {
           setWords([]);
+          setTodayTotalCount(0);
           setMessage("请先登录后生成 Prompt。");
           return;
         }
@@ -167,7 +170,11 @@ export default function GeneratePromptPage() {
           .order("updated_at", { ascending: false });
 
         if (error) throw error;
-        setWords(dedupeWords((data ?? []) as UserWord[]));
+        const todayWords = dedupeWords((data ?? []) as UserWord[]);
+        const markedCoreWords = todayWords.filter((word) => word.is_core);
+        const coreWords = markedCoreWords.length ? markedCoreWords.slice(0, CORE_WORD_COUNT) : pickCoreWords(todayWords);
+        setTodayTotalCount(todayWords.length);
+        setWords(coreWords);
       } catch (error) {
         setMessage(error instanceof Error ? error.message : "加载今日单词失败");
       } finally {
@@ -190,13 +197,17 @@ export default function GeneratePromptPage() {
     <AppShell>
       <div className="mb-4">
         <h1 className="text-xl font-bold">今日 Prompt 导出</h1>
-        <p className="mt-1 text-sm text-stone-600">根据今天学习和复习过的单词，生成可复制到 ChatGPT 的四科训练 Prompt。</p>
+        <p className="mt-1 text-sm text-stone-600">只使用今日核心词生成可复制到 ChatGPT 的四科训练 Prompt。</p>
       </div>
 
       <section className="mb-4 rounded border border-stone-200 bg-white p-4">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-sm text-stone-500">今日目标单词数量</p>
+            <p className="text-sm text-stone-500">今日总词数</p>
+            <p className="text-3xl font-bold text-sage">{loading ? "-" : todayTotalCount}</p>
+          </div>
+          <div>
+            <p className="text-sm text-stone-500">核心词数量</p>
             <p className="text-3xl font-bold text-sage">{loading ? "-" : words.length}</p>
           </div>
           {message ? <p className="text-sm text-stone-600">{message}</p> : null}
@@ -204,9 +215,9 @@ export default function GeneratePromptPage() {
       </section>
 
       <section className="mb-4 rounded border border-stone-200 bg-white p-4">
-        <h2 className="mb-3 text-lg font-bold">今日目标单词列表</h2>
+        <h2 className="mb-3 text-lg font-bold">今日核心词列表</h2>
         {loading ? <p className="text-sm text-stone-600">加载中</p> : null}
-        {!loading && !words.length ? <p className="text-sm text-stone-600">今天还没有学习或复习记录。</p> : null}
+        {!loading && !words.length ? <p className="text-sm text-stone-600">今天还没有可导出的核心词。</p> : null}
         {words.length ? (
           <div className="grid gap-2 sm:grid-cols-2">
             {words.map((item) => (

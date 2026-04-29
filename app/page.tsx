@@ -4,11 +4,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { WordLearningActions } from "@/components/WordLearningActions";
+import { applyCoreFlags, DEFAULT_DAILY_WORD_COUNT, pickCoreWords } from "@/lib/core-words";
 import { startOfTodayIso } from "@/lib/date";
 import { createClient } from "@/lib/supabase-browser";
 import type { UserWord, VocabularyBankWord } from "@/lib/types";
 
-const DAILY_WORD_COUNT = 20;
+const DAILY_WORD_COUNT = DEFAULT_DAILY_WORD_COUNT;
 
 export default function HomePage() {
   const router = useRouter();
@@ -90,9 +91,7 @@ export default function HomePage() {
         return !learnedVocabularyIds.has(row.id) && !learnedWordKeys.has(row.word.toLowerCase());
       });
 
-      if (candidates.length < DAILY_WORD_COUNT) {
-        throw new Error(`可抽取的新词不足 ${DAILY_WORD_COUNT} 个，请先导入更多词库。`);
-      }
+      if (!candidates.length) throw new Error("没有可抽取的新词，请先导入更多词库。");
 
       const selected = shuffle(candidates).slice(0, DAILY_WORD_COUNT);
       const now = new Date().toISOString();
@@ -108,6 +107,7 @@ export default function HomePage() {
             example_sentence: row.example_sentence,
             source: row.source,
             tags: row.tags,
+            is_core: false,
             familiarity_level: 0,
             review_count: 0,
             next_review_at: now,
@@ -116,10 +116,40 @@ export default function HomePage() {
         )
         .select("*");
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        if (!insertError.message.toLowerCase().includes("is_core")) throw insertError;
 
-      setTodayWords((items) => [...items, ...((inserted ?? []) as UserWord[])]);
-      setMessage("已追加生成20个单词");
+        const { data: fallbackInserted, error: fallbackError } = await supabase
+          .from("user_words")
+          .insert(
+            selected.map((row) => ({
+              user_id: user.id,
+              vocabulary_bank_id: row.id,
+              word: row.word,
+              meaning: row.meaning,
+              example_sentence: row.example_sentence,
+              source: row.source,
+              tags: row.tags,
+              familiarity_level: 0,
+              review_count: 0,
+              next_review_at: now,
+              first_learned_at: now
+            }))
+          )
+          .select("*");
+
+        if (fallbackError) throw fallbackError;
+        const combined = [...todayWords, ...((fallbackInserted ?? []) as UserWord[])];
+        setTodayWords(applyCoreFlags(combined, pickCoreWords(combined)));
+        setMessage(`已追加生成${fallbackInserted?.length ?? 0}个单词`);
+        return;
+      }
+
+      const combined = [...todayWords, ...((inserted ?? []) as UserWord[])];
+      const coreWords = pickCoreWords(combined);
+      await persistCoreFlags(user.id, combined, coreWords);
+      setTodayWords(applyCoreFlags(combined, coreWords));
+      setMessage(`已追加生成${inserted?.length ?? 0}个单词`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "生成今日20词失败");
     } finally {
@@ -136,14 +166,14 @@ export default function HomePage() {
     <AppShell>
       <section className="mb-5 rounded border border-stone-200 bg-white p-4">
         <h1 className="mb-2 text-xl font-bold">今日学习</h1>
-        <p className="mb-4 text-sm text-stone-600">从词库中随机抽取 20 个未学习单词，加入你的今日学习列表。</p>
+        <p className="mb-4 text-sm text-stone-600">从词库中随机抽取 40-60 个未学习单词，并自动标记 20 个核心词。</p>
         <button
           type="button"
           disabled={generating}
           onClick={generateTodayWords}
           className="w-full rounded bg-sage px-4 py-3 font-semibold text-white disabled:opacity-60"
         >
-          {generating ? "生成中" : "生成今日20词"}
+          {generating ? "生成中" : "生成今日词"}
         </button>
         {message ? <p className="mt-3 text-sm text-stone-600">{message}</p> : null}
       </section>
@@ -154,7 +184,10 @@ export default function HomePage() {
         {!loading && !todayWords.length ? <p className="rounded border border-stone-200 bg-white p-4 text-center">今天还没有生成单词</p> : null}
         {todayWords.map((item) => (
           <article key={item.id} className="rounded border border-stone-200 bg-white p-4">
-            <h3 className="text-lg font-bold">{item.word}</h3>
+            <div className="mb-1 flex items-center justify-between gap-2">
+              <h3 className="text-lg font-bold">{item.word}</h3>
+              {item.is_core ? <span className="rounded bg-sage px-2 py-1 text-xs font-semibold text-white">核心词</span> : <span className="text-xs text-stone-400">覆盖词</span>}
+            </div>
             <p className="whitespace-pre-wrap">{item.meaning}</p>
             <WordLearningActions word={item} onRecorded={updateRecordedWord} />
           </article>
@@ -162,6 +195,26 @@ export default function HomePage() {
       </section>
     </AppShell>
   );
+}
+
+async function persistCoreFlags(userId: string, words: UserWord[], coreWords: UserWord[]) {
+  const supabase = createClient();
+  const coreIds = coreWords.map((word) => word.id);
+  const nonCoreIds = words.map((word) => word.id).filter((id) => !coreIds.includes(id));
+
+  try {
+    if (nonCoreIds.length) {
+      await supabase.from("user_words").update({ is_core: false }).eq("user_id", userId).in("id", nonCoreIds);
+    }
+
+    if (coreIds.length) {
+      const { error } = await supabase.from("user_words").update({ is_core: true }).eq("user_id", userId).in("id", coreIds);
+      if (error) throw error;
+    }
+  } catch (error) {
+    const message = typeof error === "object" && error && "message" in error ? String(error.message) : "";
+    if (!message.toLowerCase().includes("is_core")) throw error;
+  }
 }
 
 function shuffle<T>(items: T[]) {

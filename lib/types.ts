@@ -23,6 +23,7 @@ export type UserWord = {
   tags: string[];
   familiarity_level: number;
   review_count: number;
+  is_core?: boolean | null;
   next_review_at: string | null;
   last_reviewed_at: string | null;
   last_review_result?: "know" | "vague" | "unknown" | null;

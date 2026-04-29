@@ -23,6 +23,7 @@ create table if not exists public.user_words (
   example_sentence text,
   source text,
   tags text[] not null default '{}',
+  is_core boolean not null default false,
   familiarity_level integer not null default 0 check (familiarity_level between 0 and 5),
   review_count integer not null default 0 check (review_count >= 0),
   next_review_at timestamptz not null default now(),
@@ -138,6 +139,7 @@ using (user_id = auth.uid());
 create index if not exists vocabulary_bank_user_created_idx on public.vocabulary_bank (user_id, created_at desc);
 create index if not exists vocabulary_bank_user_difficulty_idx on public.vocabulary_bank (user_id, difficulty_level);
 create index if not exists user_words_user_next_review_idx on public.user_words (user_id, next_review_at);
+create index if not exists user_words_user_core_idx on public.user_words (user_id, is_core, first_learned_at desc);
 create index if not exists user_words_user_first_learned_idx on public.user_words (user_id, first_learned_at desc);
 create index if not exists user_words_user_last_reviewed_idx on public.user_words (user_id, last_reviewed_at desc);
 create index if not exists packs_user_created_idx on public.daily_training_packs (user_id, created_at desc);

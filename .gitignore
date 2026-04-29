@@ -1,0 +1,10 @@
+node_modules
+.next
+out
+.env.local
+.vercel
+*.log
+.DS_Store
+__pycache__/
+output/
+MinerU_Batch_Export_*/

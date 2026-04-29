@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  background: #fbfaf7;
+  color: #172026;
+}
+
+input,
+textarea,
+select {
+  font-size: 16px;
+}
+
+.prose-section h1,
+.prose-section h2,
+.prose-section h3 {
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+}
+
+.prose-section p,
+.prose-section li {
+  line-height: 1.75;
+}

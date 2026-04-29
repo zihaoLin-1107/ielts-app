@@ -92,19 +92,6 @@ export default function DailyWordsPage() {
       } = await supabase.auth.getUser();
       if (!user) throw new Error("请先登录");
 
-      const { data: existingToday } = await supabase
-        .from("user_words")
-        .select("*")
-        .eq("user_id", user.id)
-        .gte("first_learned_at", startOfTodayIso())
-        .order("first_learned_at", { ascending: true });
-
-      if (existingToday?.length) {
-        setTodayWords(existingToday as UserWord[]);
-        setMessage("今天已经抽取过单词，不会重复抽取。");
-        return;
-      }
-
       const { data: learnedRows } = await supabase.from("user_words").select("word,vocabulary_bank_id").eq("user_id", user.id);
       const learnedIds = new Set((learnedRows ?? []).map((row) => row.vocabulary_bank_id));
       const learnedWordKeys = new Set((learnedRows ?? []).map((row) => String(row.word).toLowerCase()));
@@ -144,9 +131,9 @@ export default function DailyWordsPage() {
         .select("*");
 
       if (insertError) throw insertError;
-      setTodayWords((inserted ?? []) as UserWord[]);
+      setTodayWords((items) => [...items, ...((inserted ?? []) as UserWord[])]);
       setTotalLearningWords((value) => value + (inserted?.length ?? 0));
-      setMessage(`已生成 ${inserted?.length ?? 0} 个今日新词。`);
+      setMessage(`已追加生成 ${inserted?.length ?? 0} 个今日新词。`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "生成失败");
     } finally {
@@ -183,8 +170,8 @@ export default function DailyWordsPage() {
             onChange={(event) => setCount(Math.max(5, Math.min(50, Number(event.target.value) || 20)))}
           />
         </label>
-        <button disabled={generating || todayWords.length > 0} onClick={generate} className="w-full rounded bg-sage px-4 py-3 font-semibold text-white disabled:opacity-60">
-          {generating ? "生成中" : todayWords.length ? "今天已生成" : "生成今日单词"}
+        <button disabled={generating} onClick={generate} className="w-full rounded bg-sage px-4 py-3 font-semibold text-white disabled:opacity-60">
+          {generating ? "生成中" : todayWords.length ? "继续生成今日单词" : "生成今日单词"}
         </button>
         {message ? <p className="mt-3 text-sm text-stone-600">{message}</p> : null}
       </section>

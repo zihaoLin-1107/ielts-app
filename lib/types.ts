@@ -25,6 +25,7 @@ export type UserWord = {
   review_count: number;
   next_review_at: string | null;
   last_reviewed_at: string | null;
+  last_review_result?: "know" | "vague" | "unknown" | null;
   first_learned_at: string | null;
   created_at: string;
   updated_at: string;

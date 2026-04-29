@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
+import { WordLearningActions } from "@/components/WordLearningActions";
 import { startOfTodayIso } from "@/lib/date";
 import { createClient } from "@/lib/supabase-browser";
 import type { UserWord, VocabularyBankWord } from "@/lib/types";
@@ -125,6 +126,10 @@ export default function HomePage() {
     }
   }
 
+  function updateRecordedWord(updatedWord: UserWord) {
+    setTodayWords((items) => items.map((item) => (item.id === updatedWord.id ? updatedWord : item)));
+  }
+
   return (
     <AppShell>
       <section className="mb-5 rounded border border-stone-200 bg-white p-4">
@@ -149,6 +154,7 @@ export default function HomePage() {
           <article key={item.id} className="rounded border border-stone-200 bg-white p-4">
             <h3 className="text-lg font-bold">{item.word}</h3>
             <p className="whitespace-pre-wrap">{item.meaning}</p>
+            <WordLearningActions word={item} onRecorded={updateRecordedWord} />
           </article>
         ))}
       </section>

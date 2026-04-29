@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/AppShell";
+import { WordLearningActions } from "@/components/WordLearningActions";
 import { startOfTodayIso } from "@/lib/date";
 import { createClient } from "@/lib/supabase-browser";
 import type { UserWord, VocabularyBankWord } from "@/lib/types";
@@ -95,6 +96,10 @@ export default function DailyWordsPage() {
     }
   }
 
+  function updateRecordedWord(updatedWord: UserWord) {
+    setTodayWords((items) => items.map((item) => (item.id === updatedWord.id ? updatedWord : item)));
+  }
+
   return (
     <AppShell>
       <h1 className="mb-4 text-xl font-bold">今日单词</h1>
@@ -124,6 +129,7 @@ export default function DailyWordsPage() {
             <p className="whitespace-pre-wrap">{item.meaning}</p>
             {item.example_sentence ? <p className="mt-2 text-sm text-stone-600">{item.example_sentence}</p> : null}
             {item.tags?.length ? <p className="mt-2 text-xs text-stone-500">{item.tags.join(" / ")}</p> : null}
+            <WordLearningActions word={item} onRecorded={updateRecordedWord} />
           </article>
         ))}
         {!loading && !todayWords.length ? <p className="rounded border border-stone-200 bg-white p-4 text-center">今天还没有生成新词</p> : null}

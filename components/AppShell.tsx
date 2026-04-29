@@ -6,7 +6,8 @@ const nav = [
   ["词库", "/vocabulary"],
   ["新词", "/daily-words"],
   ["复习", "/review"],
-  ["训练包", "/training-packs"]
+  ["训练包", "/training-packs"],
+  ["Prompt", "/generate-prompt"]
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -18,7 +19,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </Link>
         <SignOutButton />
       </header>
-      <nav className="mb-5 grid grid-cols-5 gap-2 text-center text-sm">
+      <nav className="mb-5 grid grid-cols-2 gap-2 text-center text-sm sm:grid-cols-3 md:grid-cols-6">
         {nav.map(([label, href]) => (
           <Link key={href} href={href} className="rounded border border-stone-200 bg-white px-2 py-2">
             {label}
